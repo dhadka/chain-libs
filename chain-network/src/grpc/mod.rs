@@ -10,4 +10,4 @@ mod convert;
 mod streaming;
 
 pub use client::Client;
-pub use server::{NodeService, Server};
+pub use server::Server;

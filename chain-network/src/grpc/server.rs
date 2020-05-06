@@ -5,10 +5,57 @@ use crate::core::server::{BlockService, FragmentService, GossipService, Node};
 use crate::data::{block, fragment, BlockId};
 use crate::PROTOCOL_VERSION;
 use tonic::{Code, Status};
+use tower_service::Service;
 
 use std::convert::TryFrom;
+use std::task::{Context, Poll};
 
-pub type Server<T> = proto::node_server::NodeServer<NodeService<T>>;
+type InnerServer<T> = proto::node_server::NodeServer<NodeService<T>>;
+
+#[derive(Debug)]
+pub struct Server<T: Node> {
+    inner: InnerServer<T>,
+}
+
+impl<T: Node> Server<T> {
+    pub fn new(node: T) -> Self {
+        let inner = InnerServer::new(NodeService::new(node));
+        Server { inner }
+    }
+}
+
+impl<T: Node> Clone for Server<T> {
+    fn clone(&self) -> Self {
+        Server {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<T, R> Service<R> for Server<T>
+where
+    T: Node,
+    InnerServer<T>: Service<R>,
+{
+    type Response = <InnerServer<T> as Service<R>>::Response;
+    type Error = <InnerServer<T> as Service<R>>::Error;
+    type Future = <InnerServer<T> as Service<R>>::Future;
+
+    fn poll_ready(&mut self, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: R) -> Self::Future {
+        self.inner.call(req)
+    }
+}
+
+impl<T> tonic::transport::NamedService for Server<T>
+where
+    T: Node,
+{
+    const NAME: &'static str = <InnerServer<T> as tonic::transport::NamedService>::NAME;
+}
 
 #[derive(Debug)]
 pub struct NodeService<T> {
