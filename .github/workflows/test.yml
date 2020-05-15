@@ -1,5 +1,5 @@
 name: Continuous integration
-
+#foo
 on:
   push:
     branches-ignore:
