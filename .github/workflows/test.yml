@@ -2,7 +2,7 @@ name: Continuous integration
 
 on:
   push:
-    branches_ignore:
+    branches-ignore:
       - 'ci/**'
   pull_request:
 
