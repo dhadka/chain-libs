@@ -1,6 +1,10 @@
-on: [push, pull_request]
-
 name: Continuous integration
+
+on:
+  push:
+    branches_ignore:
+      - 'ci/**'
+  pull_request:
 
 jobs:
   test:
@@ -13,18 +17,16 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      - name: Fetch commit hash of the crates.io registry index
-        shell: bash
+      - name: Fetch baseline Cargo.lock
         run: |
-          commit=$(git ls-remote --heads https://github.com/rust-lang/crates.io-index.git master | cut -f1)
-          echo "$commit"
-          echo "::set-env name=CRATES_IO_SHA::$commit"
+          git fetch --depth=2 origin ci/cargo-lock
+          git cherry-pick FETCH_HEAD
 
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-v1-${{ hashFiles('**/Cargo.toml') }}-${{ env.CRATES_IO_SHA }}
+          key: ${{ runner.os }}-cargo-registry-v1-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-registry-v1-${{ hashFiles('**/Cargo.toml') }}-
             ${{ runner.os }}-cargo-registry-v1-
